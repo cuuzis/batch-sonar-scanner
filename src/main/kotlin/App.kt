@@ -5,6 +5,8 @@ import java.net.URL
 
 
 fun main(args: Array<String>) {
+
+
     val fileURLs = readLinesFromFile("links.txt")
     for (fileURL in fileURLs) {
         val fileName = fileURL.substringBefore(".zip").split("/").last()
@@ -14,19 +16,29 @@ fun main(args: Array<String>) {
         val projectFullName = "QC - $projectName".replace("_", " ")
 
         val zipFile = File("zipfile.zip")
-        val oldFiles = File(".").listFiles()
         val url = URL("http://java.labsoft.dcc.ufmg.br/qualitas.class/corpus/$fileName")
         FileUtils.copyURLToFile(url, zipFile)
+
+        val oldFiles = File(".").listFiles()
 
         // unzip
         val pb = ProcessBuilder("jar", "xf", "zipfile.zip")
         val p = pb.start()
-        val returnCode = p.waitFor()
+        val stdin = RunnableDemo(p.inputStream)
+        stdin.start()
+        val stderr = RunnableDemo(p.errorStream)
+        stderr.start()
+        /*val p = pb.start()
         val reader = BufferedReader(InputStreamReader(p.inputStream))
         val allText = reader.use(BufferedReader::readText)
         print(allText)
+        val stderr = BufferedReader(InputStreamReader(p.errorStream))
+        val errText = stderr.use(BufferedReader::readText)
+        print(errText)*/
+
+        val returnCode = p.waitFor()
         if (returnCode != 0)
-            throw Throwable("unzip error")
+            throw Throwable("unzip error, return code $returnCode")
 
         // get unzipped file name
         val newFiles = File(".").listFiles()
@@ -40,8 +52,8 @@ fun main(args: Array<String>) {
                     pw.println("sonar.projectVersion=$projectVersion")
                     pw.println("sonar.sources=.")
                     pw.println("sonar.language=java")
-                    pw.println("sonar.binaries=.")
-                    pw.println("sonar.java.binaries=.")
+                    //pw.println("sonar.binaries=.")
+                    //pw.println("sonar.java.binaries=.")
                     pw.println("sonar.host.url=http://sonar.inf.unibz.it")
                     //pw.println("sonar.host.url=http://localhost:9000")
 
@@ -55,18 +67,24 @@ fun main(args: Array<String>) {
                         "sonar-scanner"
                 val pbScan = ProcessBuilder(scannerCmd, "-Dproject.settings=sonar-scanner.properties")
                         .directory(File(srcFolder.canonicalPath + File.separator))
-
                 val pScan = pbScan.start()
-                val readerScan = BufferedReader(InputStreamReader(pScan.inputStream))
+
+                val stdinScan = RunnableDemo(pScan.inputStream)
+                stdinScan.start()
+                val stderrScan = RunnableDemo(pScan.errorStream)
+                stderrScan.start()
+                /*val readerScan = BufferedReader(InputStreamReader(pScan.inputStream))
                 val allTextScan = readerScan.use(BufferedReader::readText)
                 print(allTextScan)
-                val stderr = BufferedReader(InputStreamReader(pScan.errorStream))
-                val errText = stderr.use(BufferedReader::readText)
-                print(errText)
+                val stderrScan = BufferedReader(InputStreamReader(pScan.errorStream))
+                val errTextScan = stderrScan.use(BufferedReader::readText)
+                print(errTextScan)*/
 
                 val returnCodeScan = pScan.waitFor()
                 if (returnCodeScan != 0)
-                    throw Throwable("scan error")
+                //    throw Throwable("scan error, return code $returnCodeScan")
+                    println("scan error, return code $returnCodeScan")
+
 
                 //delete folder
                 document.deleteRecursively()
